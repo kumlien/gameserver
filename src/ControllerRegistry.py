@@ -9,19 +9,30 @@ from src.controllers.IndexController import IndexController
 
 class ControllerRegistry:
     indexController = IndexController()
-    mappings = dict([('users',  UsersController()), ('highscores', HighscoreController())])
+    usersController = UsersController()
+    scoreController = HighscoreController(usersController)
+    mappings = dict([
+        ('login',  usersController), 
+        ('score', scoreController),
+        ('highscorelist', scoreController),
+        ('', indexController)
+    ])
     
     def registerController(self, resource, handler):
         ControllerRegistry.mappings[resource]=handler
     
+    # Ok, this is somewhat backward. The controllers doesn't serve a 'root' resource in this 
+    # scenario but instead they serve a 'tail' resource i.e. they are picked based on the last
+    # element in the URL, not the first. 
+    # GET /<userid>/login
+    # POST /<levelid>/score?sessionkey=<sessionkey>
+    # GET /<levelid>/highscorelist
     def getController(self, path):
         print('Looking up handler for path', path)
         handler = ControllerRegistry.indexController
         if path in ControllerRegistry.mappings.keys():
-            print('We actually have a handler for', path, 'called', ControllerRegistry.mappings[path])
+            print('We have a handler for', path, 'called', ControllerRegistry.mappings[path])
             handler = ControllerRegistry.mappings[path]
-        else:
-            print('No mapping found for', path, ', fallback to index controller')
 
         return handler
 

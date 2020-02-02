@@ -1,36 +1,82 @@
 import json
+import uuid
+import time
+import logging
 
 '''
 Controller responsible or serving the 'users' resource. 
 For now we bundle the controller with the repository
 '''
 
-class UsersRepo(object):
+class UserRepo(object):
     users = {}
 
-class User():
-    def __init__(self, firstName, lastName, age):
-        self.firstName = firstName
-        self.lastName = lastName
-        self.age = age
-
+class SessionRepo(object):
+    sessions = {}
     
+    #Add/update session for a user
+    def putSession(self, session):
+        self.sessions[session.id]=session
+
+    def getSession(self, id):
+        return self.sessions[id]
+
+# A Session has an id, a user id and a timestamp when it was created.
+class Session():
+    max_age = 10 * 60
+
+    def __init__(self, id, user_id, timestamp):
+        self.id=id
+        self.user_id = user_id
+        self.timestamp = timestamp
+
+    def isValid(self):
+        return self.timestamp + self.max_age < time.time()
+
+# A user only have an id
+class User():
+    def __init__(self, id):
+        self.id = id
+
 
 class UsersController:
+    ID_FLOOR = 1000
+    ID_CEILING = 9999
+    sessionRepo = SessionRepo()
+    userRepo = UserRepo()
 
-    def handleGet(self, id=None):
-        print('Users controller called with id', id)
+    def isValidSessionKey(self, sessionKey):
+        logging.info('Validating sessionKey %s', sessionKey)
+        session = self.sessionRepo.getSession(sessionKey)
+        return session is not None and session.isValid()
+
+
+    '''
+    The GET request works like this:
+        IF NO id is specified then we return the full users collection as a json struct.
+        IF an id is specified we treat it as a LOGIN request for that (user-) id
+        and upsert the session key record for that user. The id range is from 1000 -> 9999
+    '''
+    def handleGet(self, user_id=None):
+        print('Users controller called with id', user_id)
         body = ''
         code = 200
-        if id is None:
-            print('Return all users')
-            body = json.dumps(UsersRepo.users.values)
-        elif id in UsersRepo.users:
-            user = UsersRepo.users[id]
-            user = User('Svante', 'Kumlien', '47')
-            body = json.dumps(user.__dict__)
-        else:
-            code = 404
-            body = 'This is not the user you are looking for...'
-
+        if user_id is None: # Return all users, no pagination for now
+            body = json.dumps([ob.__dict__ for ob in self.userRepo.users.values()])
+        elif self.idWithinBounds(user_id): # User wants to login, give her a new session key
+            session = Session(uuid.uuid4(), user_id, time.time())
+            self.sessionRepo.putSession(session)
+            body = json.dumps({'sessionKey':session.id.hex})
+            print('Generated session key:', session.id)
+        else: #Bad id, send 400
+            code = 400
+            body = json.dumps({'errorMessage':'id must be between ' + str(self.ID_FLOOR) + ' and ' + str(self.ID_CEILING)})
+        
         return code, {'Content-Type': 'Application/json; charset=UTF-8'}, body
+
+    #Return True if the user id is an int and in valid range
+    def idWithinBounds(self, user_id):
+        try:
+            return self.ID_FLOOR <= int(user_id) <= self.ID_CEILING
+        except:
+            return False
