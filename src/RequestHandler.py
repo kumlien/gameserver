@@ -48,10 +48,8 @@ class MyRequestDispatcher(BaseHTTPRequestHandler):
         if(body is not None):
             self.wfile.write(body.encode('utf8'))
 
-    # We only handle one level deep paths like 'users', not 'api/users'
-    # e.g. we expect all controllers to handel one top level resource
-    # like users and anything after that resource is treated as an id 
-    # in that resource
+
+    # todo handle more than one '/' in path, like '//'
     def extractResourceAndId(self, path):
         logging.info('Extracting resource and possibly id from path %s', path)
         resource = ''

@@ -12,11 +12,11 @@ class SessionRepo(object):
     
     #Add/update session for a user
     def putSession(self, session):
-        logging.info('Saving session with id %s', session.id)
-        self.sessions[session.id]=session
+        #Use .hex since that's what we give back to the client
+        logging.info('Saving session with id %s', session.id.hex)
+        self.sessions[session.id.hex]=session
 
     def getSession(self, id):
-        logging.info('Returning session with id %s', id)
         try:
             return self.sessions[id]
         except:
@@ -32,7 +32,10 @@ class Session():
         self.timestamp = timestamp
 
     def isValid(self):
-        return self.timestamp + self.max_age < time.time()
+        logging.info("Let's see if I'm valid (ts: %s)", self.timestamp)
+        valid = self.timestamp + self.max_age > time.time()
+        logging.info("I'm a valid session: %s", valid)
+        return valid
 
 
 class UsersController:
@@ -43,7 +46,11 @@ class UsersController:
     def isValidSessionKey(self, sessionKey):
         logging.info('Validating sessionKey %s', sessionKey)
         session = self.sessionRepo.getSession(sessionKey)
+        logging.info('Got a session: %s', session)
         return session is not None and session.isValid()
+
+    def getUserIdBySessionId(self, session_id):
+        return self.sessionRepo.getSession(session_id).user_id
 
 
     '''
@@ -62,7 +69,7 @@ class UsersController:
             session = Session(uuid.uuid4(), user_id, time.time())
             self.sessionRepo.putSession(session)
             body = json.dumps({'sessionKey':session.id.hex})
-            print('Generated session key:', session.id)
+            logging.info('Generated session key: %s', session.id.hex)
         else: #Bad id, send 400
             code = 400
             body = json.dumps({'errorMessage':'id must be between ' + str(self.ID_FLOOR) + ' and ' + str(self.ID_CEILING)})

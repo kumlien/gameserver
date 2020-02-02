@@ -1,6 +1,7 @@
-from src.controllers.HighscoreController import HighscoreController
+from src.controllers.ScoreController import ScoreController
 from src.controllers.UsersController import UsersController
 from src.controllers.IndexController import IndexController
+import logging
 '''
     Simple map/dict where (http-) controllers can register themselves to 
     handle different resources. Hardcoded paths for now.
@@ -10,7 +11,7 @@ from src.controllers.IndexController import IndexController
 class ControllerRegistry:
     indexController = IndexController()
     usersController = UsersController()
-    scoreController = HighscoreController(usersController)
+    scoreController = ScoreController(usersController)
     mappings = dict([
         ('login',  usersController), 
         ('score', scoreController),
@@ -28,10 +29,10 @@ class ControllerRegistry:
     # POST /<levelid>/score?sessionkey=<sessionkey>
     # GET /<levelid>/highscorelist
     def getController(self, path):
-        print('Looking up handler for path', path)
+        logging.info('Looking up handler for path %s', path)
         handler = ControllerRegistry.indexController
         if path in ControllerRegistry.mappings.keys():
-            print('We have a handler for', path, 'called', ControllerRegistry.mappings[path])
+            logging.info('We have a handler for %s called %s', path, str(ControllerRegistry.mappings[path]))
             handler = ControllerRegistry.mappings[path]
 
         return handler
