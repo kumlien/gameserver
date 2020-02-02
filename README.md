@@ -5,9 +5,8 @@ Playing with Python
 
 ## how to run it
 * Push the green gitpod button in upper right corner
-* Wait for your dev environment to start
+* Wait for your (vs code) dev environment to start
 * To start the server write:
   ```python 
   python3 app.py 
   ```
- 
