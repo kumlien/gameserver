@@ -62,7 +62,7 @@ class MyRequestDispatcher(BaseHTTPRequestHandler):
         if len(path) > 1 and path[len(path)-1]=='/':
             path=path[0:len(path)-2]
 
-        elements = re.split(r'/', path);
+        elements = re.split(r'/', path)
         if elements is not None and len(elements) > 0:
             id = elements[0]
         if len(elements) > 1:

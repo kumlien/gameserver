@@ -7,19 +7,20 @@ import logging
 Controller responsible or serving the 'users' resource. 
 For now we bundle the controller with the repository
 '''
-
-class UserRepo(object):
-    users = {}
-
 class SessionRepo(object):
-    sessions = {}
+    sessions = dict()
     
     #Add/update session for a user
     def putSession(self, session):
+        logging.info('Saving session with id %s', session.id)
         self.sessions[session.id]=session
 
     def getSession(self, id):
-        return self.sessions[id]
+        logging.info('Returning session with id %s', id)
+        try:
+            return self.sessions[id]
+        except:
+            return None
 
 # A Session has an id, a user id and a timestamp when it was created.
 class Session():
@@ -33,17 +34,11 @@ class Session():
     def isValid(self):
         return self.timestamp + self.max_age < time.time()
 
-# A user only have an id
-class User():
-    def __init__(self, id):
-        self.id = id
-
 
 class UsersController:
     ID_FLOOR = 1000
     ID_CEILING = 9999
     sessionRepo = SessionRepo()
-    userRepo = UserRepo()
 
     def isValidSessionKey(self, sessionKey):
         logging.info('Validating sessionKey %s', sessionKey)
@@ -62,7 +57,7 @@ class UsersController:
         body = ''
         code = 200
         if user_id is None: # Return all users, no pagination for now
-            body = json.dumps([ob.__dict__ for ob in self.userRepo.users.values()])
+            body = json.dumps([ob.__dict__ for ob in self.sessionRepo.sessions.keys()])
         elif self.idWithinBounds(user_id): # User wants to login, give her a new session key
             session = Session(uuid.uuid4(), user_id, time.time())
             self.sessionRepo.putSession(session)
