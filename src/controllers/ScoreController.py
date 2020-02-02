@@ -33,8 +33,10 @@ class ScoreRepo(object):
                     rank -= 1
                 if score.user_id == new_score.user_id:
                     prev_score = score
+                if lowest_score is None or lowest_score.score > score.score:
+                    lowest_score = score
 
-            logging.info('After checks, rank: %s and previous score %s', rank, prev_score)
+            logging.info('After checks, rank: %s, previous score %s and lowest score is %s', rank, prev_score, lowest_score)
             # if rank < 15: either replace the previous_score or the lowest_score
                 
 
