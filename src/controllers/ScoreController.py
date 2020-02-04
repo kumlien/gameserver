@@ -25,34 +25,38 @@ class ScoreRepo(object):
     # Add score IF it's in the top 15 AND the score is better than the users previous score
     def addScore(self, new_score):
         
-        try: 
+        #first find out if new_score is among the top 15, if not bail out directly
+        level = self.scores[new_score.level]
+        isHighScore = any((s is None) or (s.score < new_score.score) for s in level)
+        if not isHighScore:
+            return level
+        
+        #Ok, we have a high-score. let's figure out which element to replace
+        try:
             scoresLock.acquire()
-            level = self.scores[new_score.level]
-            logging.info('Before adding score: %s', str(list(map(lambda s: str(s.user_id) + ":" + str(s.score), level))))
-            prev_score = None
-            lowest_score = Score(0,0,0)
-            rank = self.LIST_SIZE #Start with a rank just outside the top list
-            for old_score in level:
-                if old_score is None or old_score.score < new_score.score:
-                    rank -= 1
-                if old_score is not None and old_score.user_id == new_score.user_id:
-                    prev_score = old_score
-                if old_score is not None and lowest_score.score > old_score.score:
-                    lowest_score = old_score
-
-            logging.info('After checks, rank: %s, previous score %s and lowest score is %s', rank, prev_score, str(lowest_score.score))
-            # if rank < 15: either replace the previous_score or the lowest_score
-            if rank < 15:
-                logging.info('Rank is lower than 15 (%s), either replace users previous score or replace the lowest score', rank)
-                if prev_score is not None:
-                    logging.info('User already has a score on the list (a score of %s), lets replace it', str(prev_score.score))
-                    self.scores[new_score.level][:] = [new_score if x.user_id==new_score.user_id else x for x in level]
-                else:
-                    logging.info('User doesnt have a score on the list lets replace the lowest one (which has a score of %s)', str(lowest_score.score))
-                    self.scores[new_score.level][:] = [new_score if x.user_id==lowest_score.user_id else x for x in level]
+            lowest_score = None
+            
+            #Replace:
+            #1) users own score 2) None 3) lowest score entered
+            score_replaced = False
+            for i, current_score in enumerate(level):
+                if current_score is not None and current_score.user_id == new_score.user_id: # User has a previous score
+                    self.scores[new_score.level][:] = [new_score if x.user_id == new_score.user_id else x for x in level]
+                    score_replaced = True
+                    break
+                if current_score is None: #There is a none in the list. This only works because real scores will always appear before None in the list...
+                    level[i] = new_score
+                    self.scores[new_score.level] = level
+                    score_replaced = True
+                    break
+                elif lowest_score is None or lowest_score.score > current_score.score: # Set lowest score
+                    lowest_score = current_score
+            
+            if not score_replaced:
+                self.scores[new_score.level][:] = [new_score if x.user_id==lowest_score.user_id else x for x in level]
         finally:
             scoresLock.release()
-        logging.info("Level %s is now %s", new_score.level, str(list(map(lambda s:s.score, self.scores[new_score.level]))))
+        return self.scores[new_score.level]
 
 
 class ScoreController:
