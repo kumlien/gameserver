@@ -2,4 +2,3 @@ language: python
 sudo: false
 python:
 - 3.7
-script: py.test -v
