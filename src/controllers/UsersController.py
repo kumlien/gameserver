@@ -6,6 +6,7 @@ import logging
 '''
 Controller responsible or serving the 'users' resource. 
 For now we bundle the controller with the repository
+TODO reaper for removing old sessions
 '''
 class SessionRepo(object):
     sessions = dict()
