@@ -25,6 +25,11 @@ class ScoreRepo(object):
         # Map with level as key and a lock as value
         self.locks = defaultdict(lambda: threading.Lock())
 
+    # Remove Nones
+    # Order by score, user_id
+    def getLevel(self, level):
+        return [score for score in self.scores[level] if score is not None]
+
     # Add score IF it's in the top 15 AND the score is better than the users previous score
     # Return the list of scores for the level of new_score
     def addScore(self, new_score):
@@ -79,8 +84,12 @@ class ScoreController:
             
             if int(score["score"]) < 1:
                 return Utils.error(400, 'No scores lower than one please!')
+            if int(score["score"]) > 2147483647:
+                return Utils.error(400, 'No scores higher than 2147483647 please!')
             
             if int(level) < 1:
+                return Utils.error(400, "No levels below one please!")
+            if int(level) > 2147483647:
                 return Utils.error(400, "No levels below one please!")
 
             if self.SESSION_KEY_PARAM not in query_params:
@@ -96,4 +105,10 @@ class ScoreController:
 
     def handleGet(self, level):
         logging.info('Asked to return scores for level %s', level)
-        return Utils.ok()
+        if int(level) < 1:
+            return Utils.error(400, "No levels below one please!")
+        if int(level) > 2147483647:
+            return Utils.error(400, "No levels below one please!")
+        level = self.score_repo.getLevel(level)
+        transform level to dict
+        return Utils.ok(level)
