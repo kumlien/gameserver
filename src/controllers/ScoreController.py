@@ -46,6 +46,7 @@ class ScoreRepo(object):
             return level
         
         # Ok, we have a high-score. let's figure out which element to replace
+        # Well, don't replace if the score is lower than the users previous score, if any
         with self.locks[new_score.level]:
             lowest_score = None
             
@@ -54,7 +55,8 @@ class ScoreRepo(object):
             score_replaced = False
             for i, current_score in enumerate(level):
                 if current_score is not None and current_score.user_id == new_score.user_id: # User has a previous score
-                    self.scores[new_score.level][:] = [new_score if x is not None and x.user_id == new_score.user_id else x for x in level]
+                    if new_score.score > current_score.score: #...and the new one is higher
+                        self.scores[new_score.level][:] = [new_score if x is not None and x.user_id == new_score.user_id else x for x in level]
                     score_replaced = True
                     break
                 if current_score is None: #There is a none in the list. This only works because real scores will always appear before None in the list...
