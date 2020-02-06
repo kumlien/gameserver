@@ -66,8 +66,8 @@ class UsersController:
         code = 200
         if user_id is None: # Return all users, no pagination for now
             body = json.dumps([ob.__dict__ for ob in self.sessionRepo.sessions.keys()])
-        elif self.idWithinBounds(user_id): # User wants to login, give her a new session key
-            session = Session(uuid.uuid4(), user_id, time.time())
+        elif self.idWithinBounds(int(user_id)): # User wants to login, give her a new session key
+            session = Session(uuid.uuid4(), int(user_id), time.time())
             self.sessionRepo.putSession(session)
             body = json.dumps({'sessionKey':session.id.hex})
             logging.info('Generated session key: %s', session.id.hex)
@@ -80,6 +80,6 @@ class UsersController:
     #Return True if the user id is an int and in valid range
     def idWithinBounds(self, user_id):
         try:
-            return self.ID_FLOOR <= int(user_id) <= self.ID_CEILING
+            return self.ID_FLOOR <= user_id <= self.ID_CEILING
         except:
             return False

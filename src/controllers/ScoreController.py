@@ -25,10 +25,15 @@ class ScoreRepo(object):
         # Map with level as key and a lock as value
         self.locks = defaultdict(lambda: threading.Lock())
 
-    # Remove Nones
-    # Order by score, user_id
-    def getLevel(self, level):
-        return [score for score in self.scores[level] if score is not None]
+    # Get the current list of scores for the specified level
+    # Order by score desc and then by user_id asc
+    def getLevelSorted(self, level):
+        logging.debug("Raw scores for level %s: %s", level, self.scores[level])
+        scores = [score for score in self.scores[level] if score is not None]
+        scores.sort(key = lambda score: score.user_id, reverse=False)
+        scores.sort(key = lambda score: score.score, reverse=True)
+        logging.debug("Scores for level %s: %s", level, scores)
+        return scores
 
     # Add score IF it's in the top 15 AND the score is better than the users previous score
     # Return the list of scores for the level of new_score
@@ -45,7 +50,7 @@ class ScoreRepo(object):
             lowest_score = None
             
             # Replace either
-            # 1) users own score 2) Any None value 3) lowest score entered
+            # 1) users own score 2) Any None value 3) lowest score in the list
             score_replaced = False
             for i, current_score in enumerate(level):
                 if current_score is not None and current_score.user_id == new_score.user_id: # User has a previous score
@@ -63,15 +68,16 @@ class ScoreRepo(object):
             if not score_replaced: # Score not replaced yet, replace lowest score
                 self.scores[new_score.level][:] = [new_score if x.user_id==lowest_score.user_id else x for x in level]
 
+        logging.debug("ScoreRepo: level %s after adding score: %s", new_score.level, self.scores[new_score.level])
         return self.scores[new_score.level]
 
 
 class ScoreController:
     SESSION_KEY_PARAM = "sessionkey"
-    score_repo = ScoreRepo()
 
-    def __init__(self, usersController):
+    def __init__(self, usersController, scoreRepo=ScoreRepo()):
         self.users_controller = usersController
+        self.score_repo = scoreRepo
 
     def handlePost(self, level, score, query_params):
         try:
@@ -97,18 +103,23 @@ class ScoreController:
             
             user_id = self.users_controller.getUserIdBySessionId(sessionId)
             score = Score(user_id, level, int(score['score']))
+            logging.info("Adding score %s", score.__dict__)
             self.score_repo.addScore(score)
+            logging.info("Level is %s after adding score", self.score_repo.getLevelSorted(level))
             return Utils.ok()
         except Exception as error:
             logging.warn('Internal error when handling POST request', exc_info=True)
             return Utils.error(500, str(error))
 
+    # GET the (15 top) scores for the specified level
     def handleGet(self, level):
         logging.info('Asked to return scores for level %s', level)
         if int(level) < 1:
             return Utils.error(400, "No levels below one please!")
         if int(level) > 2147483647:
             return Utils.error(400, "No levels below one please!")
-        level = self.score_repo.getLevel(level)
-        transform level to dict
-        return Utils.ok(level)
+        l = list()
+        for score in self.score_repo.getLevelSorted(level):
+            l.append({'user': score.user_id, 'score': score.score})
+        
+        return Utils.ok(l)

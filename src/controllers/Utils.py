@@ -5,7 +5,7 @@ def error(code, message='N/A'):
         return code, {"Content-Type": "application/json"}, json.dumps({'errorMessage': message})
     return code, {"Content-Type": "application/html"}, json.dumps({'errorMessage': message})
 
-def ok(message=None):
+def ok(message=''):
     return 200, {"Content-Type": "application/json"}, json.dumps(message)
 
 def created(id, resource):
