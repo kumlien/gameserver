@@ -2,26 +2,61 @@ import json
 import uuid
 import time
 import logging
+import threading
 
 '''
 Controller responsible or serving the 'users' resource. 
-For now we bundle the controller with the repository
-TODO reaper for removing old sessions
+For now we bundle the controller with the session repository
+TODO reaper for removing invalid sessions
+TODO update timestamp of users existing session if any
 '''
 class SessionRepo(object):
-    sessions = dict()
+
+    def __init__(self):
+        self.sessions = dict()
+        self.lock = threading.Lock()
+        
     
     #Add/update session for a user
     def putSession(self, session):
-        #Use .hex since that's what we give back to the client
+        #Use .hex since that's what we give back to the client and what we will get back
         logging.info('Saving session with id %s', session.id.hex)
-        self.sessions[session.id.hex]=session
+        with self.lock:
+            self.sessions[session.id.hex]=session
+    
+    def delete(self, session):
+        logging.info("Delete session for user %s with timestamp %s", session.user_id, session.timestamp)
+        with self.lock:
+            del self.sessions[session.id.hex]
 
     def getSession(self, id):
         try:
             return self.sessions[id]
         except:
             return None
+    
+    def getSessions(self):
+        return self.sessions
+
+# try to reap old sessions
+class SessionReaper(object):
+    def __init__(self, repo, interval=10):
+        self.interval = interval
+        self.repo = repo
+
+        thread = threading.Thread(name='session-reaper', target=self.run, args=())
+        thread.daemon = False                            
+        thread.start()                                 
+
+    def run(self):
+        while True:
+            logging.info('Check for invalid sessions')
+            print('Check for invalid sessions')
+            for s in list(self.repo.getSessions().values()):
+                if not s.isValid():
+                    self.repo.delete(s)
+
+            time.sleep(self.interval)
 
 # A Session has an id, a user id and a timestamp when it was created.
 class Session():
@@ -40,9 +75,12 @@ class Session():
 
 
 class UsersController:
-    ID_FLOOR = 1000
-    ID_CEILING = 9999
-    sessionRepo = SessionRepo()
+    ID_FLOOR = 1
+    ID_CEILING = 2147483647
+
+    def __init__(self):
+        self.sessionRepo = SessionRepo()
+        #SessionReaper(self.sessionRepo)
 
     def isValidSessionKey(self, sessionKey):
         logging.info('Validating sessionKey %s', sessionKey)
@@ -61,7 +99,7 @@ class UsersController:
         and upsert the session key record for that user. The id range is from 1000 -> 9999
     '''
     def handleGet(self, user_id=None):
-        print('Users controller called with id', user_id)
+        logging.info('Users controller GET called with id %s', user_id)
         body = ''
         code = 200
         if user_id is None: # Return all users, no pagination for now

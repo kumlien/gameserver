@@ -10,7 +10,7 @@ ADDRESS = ''
 #Let the RequestHandler handle the requests...
 def main(server_class=HTTPServer, handler_class=MyRequestDispatcher):
     logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(message)s',
+                    format='%(threadName)s %(asctime)s %(message)s',
                     handlers=[logging.FileHandler("game_server.log"),
                               logging.StreamHandler()])
     server_address = (ADDRESS, PORT)
