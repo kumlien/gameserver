@@ -29,7 +29,7 @@ class ScoreRepoTest(unittest.TestCase):
         repo.addScore(score2)
         level = repo.addScore(score3)
 
-        self.assertTrue(level[0] == score3)
+        self.assertTrue(level[0] == score2)
         nones = [score for score in level if score is None]
         self.assertEqual(14, len(nones))
 
